@@ -1421,7 +1421,7 @@ pub struct TextDocumentClientCapabilities {
     #[cfg(feature = "proposed")]
     pub semantic_highlighting_capabilities: Option<SemanticHighlightingClientCapability>,
 
-    /*
+    /**
      * Capabilities specific to the `textDocument/semanticTokens`
      */
     #[serde(skip_serializing_if = "Option::is_none")]
