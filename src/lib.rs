@@ -1868,6 +1868,11 @@ pub struct ServerCapabilities {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub call_hierarchy_provider: Option<CallHierarchyServerCapability>,
 
+    /// Semantic tokens server capabilities.
+    #[cfg(feature = "proposed")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub semantic_tokens_provider: Option<SemanticTokensServerCapabilities>,
+
     /// Experimental server capabilities.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub experimental: Option<Value>,
@@ -4121,30 +4126,23 @@ pub struct SemanticTokensRegistrationOptions {
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 #[cfg(feature = "proposed")]
-pub enum SemanticTokensProvider {
+pub enum SemanticTokensServerCapabilities {
     SemanticTokensOptions(SemanticTokensOptions),
     SemanticTokensRegistrationOptions(SemanticTokensRegistrationOptions),
 }
 
 #[cfg(feature = "proposed")]
-impl From<SemanticTokensOptions> for SemanticTokensProvider {
+impl From<SemanticTokensOptions> for SemanticTokensServerCapabilities {
     fn from(from: SemanticTokensOptions) -> Self {
-        SemanticTokensProvider::SemanticTokensOptions(from)
+        SemanticTokensServerCapabilities::SemanticTokensOptions(from)
     }
 }
 
 #[cfg(feature = "proposed")]
-impl From<SemanticTokensRegistrationOptions> for SemanticTokensProvider {
+impl From<SemanticTokensRegistrationOptions> for SemanticTokensServerCapabilities {
     fn from(from: SemanticTokensRegistrationOptions) -> Self {
-        SemanticTokensProvider::SemanticTokensRegistrationOptions(from)
+        SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(from)
     }
-}
-
-#[derive(Debug, Eq, PartialEq, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-#[cfg(feature = "proposed")]
-pub struct SemanticTokensServerCapabilities {
-    pub semantic_tokens_provider: SemanticTokensProvider,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Deserialize, Serialize)]
