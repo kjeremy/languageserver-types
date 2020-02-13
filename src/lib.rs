@@ -33,7 +33,7 @@ use serde::de;
 use serde::de::Error as Error_;
 use serde_json::Value;
 #[cfg(feature = "proposed")]
-use std::convert::TryFrom;
+use std::{borrow::Cow, convert::TryFrom};
 
 pub mod notification;
 pub mod request;
@@ -3808,49 +3808,53 @@ pub struct SemanticHighlightingParams {
  *
  * @since 3.16.0 - Proposed state
  */
-#[derive(Debug, Eq, PartialEq, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Clone, Deserialize, Serialize)]
 #[cfg(feature = "proposed")]
-pub enum SemanticTokenTypes {
-    #[serde(rename = "comment")]
-    Comment,
-    #[serde(rename = "keyword")]
-    Keyword,
-    #[serde(rename = "string")]
-    String,
-    #[serde(rename = "number")]
-    Number,
-    #[serde(rename = "regexp")]
-    Regexp,
-    #[serde(rename = "operator")]
-    Operator,
-    #[serde(rename = "namespace")]
-    Namespace,
-    #[serde(rename = "type")]
-    Type,
-    #[serde(rename = "struct")]
-    Struct,
-    #[serde(rename = "class")]
-    Class,
-    #[serde(rename = "interface")]
-    Interface,
-    #[serde(rename = "enum")]
-    Enum,
-    #[serde(rename = "typeParameter")]
-    TypeParameter,
-    #[serde(rename = "function")]
-    Function,
-    #[serde(rename = "member")]
-    Member,
-    #[serde(rename = "property")]
-    Property,
-    #[serde(rename = "macro")]
-    Macro,
-    #[serde(rename = "variable")]
-    Variable,
-    #[serde(rename = "parameter")]
-    Parameter,
-    #[serde(rename = "label")]
-    Label,
+pub struct SemanticTokenType(Cow<'static, str>);
+
+#[cfg(feature = "proposed")]
+impl SemanticTokenType {
+    pub const COMMENT: SemanticTokenType = SemanticTokenType::new("comment");
+    pub const KEYWORD: SemanticTokenType = SemanticTokenType::new("keyword");
+    pub const STRING: SemanticTokenType = SemanticTokenType::new("string");
+    pub const NUMBER: SemanticTokenType = SemanticTokenType::new("number");
+    pub const REGEXP: SemanticTokenType = SemanticTokenType::new("regexp");
+    pub const OPERATOR: SemanticTokenType = SemanticTokenType::new("operator");
+    pub const NAMESPACE: SemanticTokenType = SemanticTokenType::new("namespace");
+    pub const TYPE: SemanticTokenType = SemanticTokenType::new("type");
+    pub const STRUCT: SemanticTokenType = SemanticTokenType::new("struct");
+    pub const CLASS: SemanticTokenType = SemanticTokenType::new("class");
+    pub const INTERFACE: SemanticTokenType = SemanticTokenType::new("interface");
+    pub const ENUM: SemanticTokenType = SemanticTokenType::new("enum");
+    pub const TYPE_PARAMETER: SemanticTokenType = SemanticTokenType::new("typeParameter");
+    pub const FUNCTION: SemanticTokenType = SemanticTokenType::new("function");
+    pub const MEMBER: SemanticTokenType = SemanticTokenType::new("member");
+    pub const PROPERTY: SemanticTokenType = SemanticTokenType::new("property");
+    pub const MACRO: SemanticTokenType = SemanticTokenType::new("macro");
+    pub const VARIABLE: SemanticTokenType = SemanticTokenType::new("variable");
+    pub const PARAMETER: SemanticTokenType = SemanticTokenType::new("parameter");
+    pub const LABEL: SemanticTokenType = SemanticTokenType::new("label");
+
+    pub const fn new(tag: &'static str) -> Self {
+        SemanticTokenType(Cow::Borrowed(tag))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[cfg(feature = "proposed")]
+impl From<String> for SemanticTokenType {
+    fn from(from: String) -> Self {
+        SemanticTokenType(Cow::from(from))
+    }
+}
+#[cfg(feature = "proposed")]
+impl From<&'static str> for SemanticTokenType {
+    fn from(from: &'static str) -> Self {
+        SemanticTokenType::new(from)
+    }
 }
 
 /**
@@ -3860,30 +3864,43 @@ pub enum SemanticTokenTypes {
  *
  * @since 3.16.0 - Proposed state
  */
-#[derive(Debug, Eq, PartialEq, Clone, Copy, Deserialize, Serialize)]
-#[serde(untagged)]
+#[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Clone, Deserialize, Serialize)]
 #[cfg(feature = "proposed")]
-pub enum SemanticTokenModifiers {
-    #[serde(rename = "documentation")]
-    Documentation,
-    #[serde(rename = "declaration")]
-    Declaration,
-    #[serde(rename = "definition")]
-    Definition,
-    #[serde(rename = "reference")]
-    Reference,
-    #[serde(rename = "static")]
-    Static,
-    #[serde(rename = "abstract")]
-    Abstract,
-    #[serde(rename = "deprecated")]
-    Deprecated,
-    #[serde(rename = "async")]
-    Async,
-    #[serde(rename = "volatile")]
-    Volatile,
-    #[serde(rename = "readonly")]
-    ReadOnly,
+pub struct SemanticTokenModifier(Cow<'static, str>);
+
+#[cfg(feature = "proposed")]
+impl SemanticTokenModifier {
+    pub const DOCUMENTATION: SemanticTokenModifier = SemanticTokenModifier::new("documentation");
+    pub const DECLARATION: SemanticTokenModifier = SemanticTokenModifier::new("declaration");
+    pub const DEFINITION: SemanticTokenModifier = SemanticTokenModifier::new("definition");
+    pub const REFERENCE: SemanticTokenModifier = SemanticTokenModifier::new("reference");
+    pub const STATIC: SemanticTokenModifier = SemanticTokenModifier::new("static");
+    pub const ABSTRACT: SemanticTokenModifier = SemanticTokenModifier::new("abstract");
+    pub const DEPRECATED: SemanticTokenModifier = SemanticTokenModifier::new("deprecated");
+    pub const ASYNC: SemanticTokenModifier = SemanticTokenModifier::new("async");
+    pub const VOLATILE: SemanticTokenModifier = SemanticTokenModifier::new("volatile");
+    pub const READONLY: SemanticTokenModifier = SemanticTokenModifier::new("readonly");
+
+    pub const fn new(tag: &'static str) -> Self {
+        SemanticTokenModifier(Cow::Borrowed(tag))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[cfg(feature = "proposed")]
+impl From<String> for SemanticTokenModifier {
+    fn from(from: String) -> Self {
+        SemanticTokenModifier(Cow::from(from))
+    }
+}
+#[cfg(feature = "proposed")]
+impl From<&'static str> for SemanticTokenModifier {
+    fn from(from: &'static str) -> Self {
+        SemanticTokenModifier::new(from)
+    }
 }
 
 /**
@@ -3896,12 +3913,12 @@ pub struct SemanticTokensLegend {
     /**
      * The token types a server uses.
      */
-    pub token_types: Vec<String>,
+    pub token_types: Vec<SemanticTokenType>,
 
     /**
      * The token modifiers a server uses.
      */
-    pub token_modifiers: Vec<String>,
+    pub token_modifiers: Vec<SemanticTokenModifier>,
 }
 
 /**
@@ -4060,12 +4077,12 @@ pub struct SemanticTokensClientCapabilities {
     /**
      * The token types known by the client.
      */
-    pub token_types: Vec<String>,
+    pub token_types: Vec<SemanticTokenType>,
 
     /**
      * The token modifiers known by the client.
      */
-    pub token_modifiers: Vec<String>,
+    pub token_modifiers: Vec<SemanticTokenModifier>,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Deserialize, Serialize)]
