@@ -3803,7 +3803,7 @@ pub struct SemanticHighlightingParams {
 
 /**
  * A set of predefined token types. This set is not fixed
- * an clients can specify additional token types via the
+ * and clients can specify additional token types via the
  * corresponding client capabilities.
  *
  * @since 3.16.0 - Proposed state
@@ -3855,7 +3855,7 @@ pub enum SemanticTokenTypes {
 
 /**
  * A set of predefined token modifiers. This set is not fixed
- * an clients can specify additional token types via the
+ * and clients can specify additional token types via the
  * corresponding client capabilities.
  *
  * @since 3.16.0 - Proposed state
