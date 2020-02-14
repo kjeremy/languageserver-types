@@ -32,6 +32,10 @@ use base64;
 use serde::de;
 use serde::de::Error as Error_;
 use serde_json::Value;
+
+#[cfg(feature = "proposed")]
+use serde::ser::SerializeSeq;
+
 #[cfg(feature = "proposed")]
 use std::{borrow::Cow, convert::TryFrom};
 
@@ -3922,6 +3926,61 @@ pub struct SemanticTokensLegend {
 }
 
 /**
+ * The actual tokens. For a detailed description about how the data is
+ * structured please see
+ * https://github.com/microsoft/vscode-extension-samples/blob/5ae1f7787122812dcc84e37427ca90af5ee09f14/semantic-tokens-sample/vscode.proposed.d.ts#L71
+ */
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Default)]
+#[cfg(feature = "proposed")]
+pub struct SemanticToken {
+    pub delta_line: u32,
+    pub delta_start: u32,
+    pub length: u32,
+    pub token_type: u32,
+    pub token_modifiers_bitset: u32,
+}
+
+#[cfg(feature = "proposed")]
+impl SemanticToken {
+    fn deserialize_tokens<'de, D>(deserializer: D) -> Result<Vec<SemanticToken>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let data = Vec::<u32>::deserialize(deserializer)?;
+
+        let mut res = Vec::new();
+
+        for chunk in data.chunks_exact(5) {
+            res.push(SemanticToken {
+                delta_line: chunk[0],
+                delta_start: chunk[1],
+                length: chunk[2],
+                token_type: chunk[3],
+                token_modifiers_bitset: chunk[4],
+            })
+        }
+
+        Result::Ok(res)
+    }
+
+    /// Serialize the tokens to a base64 encoded string
+    fn serialize_tokens<S>(tokens: &Vec<SemanticToken>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(tokens.len() * 5))?;
+        for token in tokens.iter() {
+            seq.serialize_element(&token.delta_line)?;
+            seq.serialize_element(&token.delta_start)?;
+            seq.serialize_element(&token.length)?;
+            seq.serialize_element(&token.token_type)?;
+            seq.serialize_element(&token.token_modifiers_bitset)?;
+        }
+        seq.end()
+    }
+}
+
+/**
  * @since 3.16.0 - Proposed state
  */
 #[derive(Debug, Eq, PartialEq, Clone, Default, Deserialize, Serialize)]
@@ -3939,10 +3998,14 @@ pub struct SemanticTokens {
 
     /**
      * The actual tokens. For a detailed description about how the data is
-     * structured pls see
+     * structured please see
      * https://github.com/microsoft/vscode-extension-samples/blob/5ae1f7787122812dcc84e37427ca90af5ee09f14/semantic-tokens-sample/vscode.proposed.d.ts#L71
      */
-    pub data: Vec<u32>,
+    #[serde(
+        deserialize_with = "SemanticToken::deserialize_tokens",
+        serialize_with = "SemanticToken::serialize_tokens"
+    )]
+    pub data: Vec<SemanticToken>,
 }
 
 /**
@@ -3952,7 +4015,11 @@ pub struct SemanticTokens {
 #[serde(rename_all = "camelCase")]
 #[cfg(feature = "proposed")]
 pub struct SemanticTokensPartialResult {
-    pub data: Vec<u32>,
+    #[serde(
+        deserialize_with = "SemanticToken::deserialize_tokens",
+        serialize_with = "SemanticToken::serialize_tokens"
+    )]
+    pub data: Vec<SemanticToken>,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Deserialize, Serialize)]
@@ -4573,5 +4640,103 @@ mod tests {
             value_set: vec![CompletionItemTag::Deprecated],
         });
         test_deserialization(r#"{"tagSupport": {"valueSet": [1]}}"#, &t);
+    }
+
+    #[cfg(feature = "proposed")]
+    #[test]
+    fn test_semantic_tokens_support_serialization() {
+        test_serialization(
+            &SemanticTokens {
+                result_id: None,
+                data: vec![],
+            },
+            r#"{"data":[]}"#,
+        );
+
+        test_serialization(
+            &SemanticTokens {
+                result_id: None,
+                data: vec![SemanticToken {
+                    delta_line: 2,
+                    delta_start: 5,
+                    length: 3,
+                    token_type: 0,
+                    token_modifiers_bitset: 3,
+                }],
+            },
+            r#"{"data":[2,5,3,0,3]}"#,
+        );
+
+        test_serialization(
+            &SemanticTokens {
+                result_id: None,
+                data: vec![
+                    SemanticToken {
+                        delta_line: 2,
+                        delta_start: 5,
+                        length: 3,
+                        token_type: 0,
+                        token_modifiers_bitset: 3,
+                    },
+                    SemanticToken {
+                        delta_line: 0,
+                        delta_start: 5,
+                        length: 4,
+                        token_type: 1,
+                        token_modifiers_bitset: 0,
+                    },
+                ],
+            },
+            r#"{"data":[2,5,3,0,3,0,5,4,1,0]}"#,
+        );
+    }
+
+    #[cfg(feature = "proposed")]
+    #[test]
+    fn test_semantic_tokens_support_deserialization() {
+        test_deserialization(
+            r#"{"data":[]}"#,
+            &SemanticTokens {
+                result_id: None,
+                data: vec![],
+            },
+        );
+
+        test_deserialization(
+            r#"{"data":[2,5,3,0,3]}"#,
+            &SemanticTokens {
+                result_id: None,
+                data: vec![SemanticToken {
+                    delta_line: 2,
+                    delta_start: 5,
+                    length: 3,
+                    token_type: 0,
+                    token_modifiers_bitset: 3,
+                }],
+            },
+        );
+
+        test_deserialization(
+            r#"{"data":[2,5,3,0,3,0,5,4,1,0]}"#,
+            &SemanticTokens {
+                result_id: None,
+                data: vec![
+                    SemanticToken {
+                        delta_line: 2,
+                        delta_start: 5,
+                        length: 3,
+                        token_type: 0,
+                        token_modifiers_bitset: 3,
+                    },
+                    SemanticToken {
+                        delta_line: 0,
+                        delta_start: 5,
+                        length: 4,
+                        token_type: 1,
+                        token_modifiers_bitset: 0,
+                    },
+                ],
+            },
+        );
     }
 }
