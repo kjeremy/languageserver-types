@@ -4093,7 +4093,10 @@ pub enum SemanticTokensDocumentProvider {
     Bool(bool),
 
     /// The server supports deltas for full documents.
-    Edits(Option<bool>),
+    Edits {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        edits: Option<bool>,
+    },
 }
 
 /**
