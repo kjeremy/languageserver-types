@@ -37,7 +37,7 @@ use serde_json::Value;
 use serde::ser::SerializeSeq;
 
 #[cfg(feature = "proposed")]
-use std::{borrow::Cow, convert::TryFrom};
+use std::{borrow::Cow, convert::TryFrom, fmt};
 
 pub mod notification;
 pub mod request;
@@ -3983,6 +3983,81 @@ impl SemanticToken {
     }
 }
 
+#[cfg(feature = "proposed")]
+impl<'de> Deserialize<'de> for SemanticToken {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct SemanticTokenVisitor;
+        const EXPECTED_LENGTH: usize = 5;
+
+        impl<'de> de::Visitor<'de> for SemanticTokenVisitor {
+            type Value = SemanticToken;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                write!(formatter, "{} u32s", EXPECTED_LENGTH)
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: de::SeqAccess<'de>,
+            {
+                Result::Ok(SemanticToken {
+                    delta_line: seq
+                        .next_element::<u32>()?
+                        .ok_or_else(|| de::Error::invalid_length(0, &self))?,
+                    delta_start: seq
+                        .next_element::<u32>()?
+                        .ok_or_else(|| de::Error::invalid_length(1, &self))?,
+                    length: seq
+                        .next_element::<u32>()?
+                        .ok_or_else(|| de::Error::invalid_length(2, &self))?,
+                    token_type: seq
+                        .next_element::<u32>()?
+                        .ok_or_else(|| de::Error::invalid_length(3, &self))?,
+                    token_modifiers_bitset: seq
+                        .next_element::<u32>()?
+                        .ok_or_else(|| de::Error::invalid_length(4, &self))?,
+                })
+            }
+        }
+
+        deserializer.deserialize_tuple(EXPECTED_LENGTH, SemanticTokenVisitor)
+    }
+}
+
+#[cfg(feature = "proposed")]
+impl<'de> Deserialize<'de> for Vec<SemanticToken> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct SemanticTokenVecVisitor;
+
+        impl<'de> de::Visitor<'de> for SemanticTokenVecVisitor {
+            type Value = Vec<SemanticToken>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                write!(formatter, "a sequence")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: de::SeqAccess<'de>,
+            {
+                //let mut values = Vec::with_capacity(size_hint::cautious(seq.size_hint() / 5));
+
+                Deserialize::deserialize(de::value::SeqAccessDeserializer::new(
+                    seq,
+                ))
+            }
+        }
+
+        deserializer.deserialize_seq(SemanticTokenVecVisitor)
+    }
+}
+
 /**
  * @since 3.16.0 - Proposed state
  */
@@ -4005,7 +4080,7 @@ pub struct SemanticTokens {
      * https://github.com/microsoft/vscode-extension-samples/blob/5ae1f7787122812dcc84e37427ca90af5ee09f14/semantic-tokens-sample/vscode.proposed.d.ts#L71
      */
     #[serde(
-        deserialize_with = "SemanticToken::deserialize_tokens",
+        //deserialize_with = "SemanticToken::deserialize_tokens",
         serialize_with = "SemanticToken::serialize_tokens"
     )]
     pub data: Vec<SemanticToken>,
