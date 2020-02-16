@@ -3947,20 +3947,23 @@ impl SemanticToken {
         D: serde::Deserializer<'de>,
     {
         let data = Vec::<u32>::deserialize(deserializer)?;
+        let chunks = data.chunks_exact(5);
 
-        let mut res = Vec::new();
-
-        for chunk in data.chunks_exact(5) {
-            res.push(SemanticToken {
-                delta_line: chunk[0],
-                delta_start: chunk[1],
-                length: chunk[2],
-                token_type: chunk[3],
-                token_modifiers_bitset: chunk[4],
-            })
+        if !chunks.remainder().is_empty() {
+            return Result::Err(serde::de::Error::custom("Length is not divisible by 5"));
         }
 
-        Result::Ok(res)
+        Result::Ok(
+            chunks
+                .map(|chunk| SemanticToken {
+                    delta_line: chunk[0],
+                    delta_start: chunk[1],
+                    length: chunk[2],
+                    token_type: chunk[3],
+                    token_modifiers_bitset: chunk[4],
+                })
+                .collect(),
+        )
     }
 
     /// Serialize the tokens to a base64 encoded string
@@ -4736,6 +4739,19 @@ mod tests {
                         token_modifiers_bitset: 0,
                     },
                 ],
+            },
+        );
+    }
+
+    #[cfg(feature = "proposed")]
+    #[test]
+    #[should_panic]
+    fn test_semantic_tokens_support_deserialization_err() {
+        test_deserialization(
+            r#"{"data":[1]}"#,
+            &SemanticTokens {
+                result_id: None,
+                data: vec![],
             },
         );
     }
